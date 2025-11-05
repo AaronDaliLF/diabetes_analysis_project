@@ -495,10 +495,295 @@ with tab2:
 with tab3:
     st.header("Análisis de Correlaciones con Diabetes")
 
-    # Crear dos pestañas dentro de TAB 3
-    sub_tab1, sub_tab2 = st.tabs(["Correlación General", "Análisis en Presencia de Diabetes"])
+    # Crear tres pestañas dentro de TAB 3
+    sub_tab1, sub_tab2, sub_tab3 = st.tabs([
+        "Condiciones Prevalentes en Diabetes",
+        "Correlación General",
+        "Análisis en Presencia de Diabetes"
+    ])
 
+    # ===== SUB-TAB 1: CONDICIONES PREVALENTES =====
     with sub_tab1:
+        st.subheader("Condiciones y Aspectos más Frecuentes en Personas con Diabetes")
+        st.markdown("""
+        Esta sección muestra qué condiciones de salud y comportamientos son más comunes
+        en personas **con diabetes** comparadas con personas **sin diabetes**.
+        """)
+
+        # Filtrar solo casos con diabetes
+        df_diabetes = df_filtered[df_filtered['diabetes_binary'] == 1]
+        df_no_diabetes = df_filtered[df_filtered['diabetes_binary'] == 0]
+
+        if len(df_diabetes) > 0 and len(df_no_diabetes) > 0:
+            # Diccionario de etiquetas
+            var_labels_full = {
+                'diabetes_binary': 'Diabetes',
+                'high_b_p': 'Presión Alta',
+                'high_chol': 'Colesterol Alto',
+                'chol_check': 'Colesterol Verificado',
+                'b_m_i': 'BMI',
+                'smoker': 'Fumador',
+                'stroke': 'Derrame',
+                'heart_diseaseor_attack': 'Enfermedad Cardíaca',
+                'phys_activity': 'Actividad Física',
+                'fruits': 'Consumo de Frutas',
+                'veggies': 'Consumo de Verduras',
+                'hvy_alcohol_consump': 'Consumo Alto Alcohol',
+                'any_healthcare': 'Cobertura de Salud',
+                'gen_hlth': 'Salud General',
+                'ment_hlth': 'Salud Mental (días)',
+                'phys_hlth': 'Salud Física (días)',
+                'diff_walk': 'Dificultad para Caminar',
+                'sex': 'Sexo',
+                'age': 'Edad'
+            }
+
+            # Variables categóricas binarias a analizar
+            binary_vars = [
+                'high_b_p', 'high_chol', 'chol_check', 'smoker', 'stroke',
+                'heart_diseaseor_attack', 'phys_activity', 'fruits', 'veggies',
+                'hvy_alcohol_consump', 'any_healthcare', 'diff_walk', 'sex'
+            ]
+
+            # 1. Gráfico de prevalencia de condiciones binarias
+            st.markdown("### 1. Prevalencia de Condiciones de Salud y Comportamientos")
+
+            prevalence_data = []
+            for var in binary_vars:
+                if var in df_diabetes.columns:
+                    prev_diabetes = (df_diabetes[var] == 1).sum() / len(df_diabetes) * 100
+                    prev_no_diabetes = (df_no_diabetes[var] == 1).sum() / len(df_no_diabetes) * 100
+                    difference = prev_diabetes - prev_no_diabetes
+
+                    prevalence_data.append({
+                        'Condición': var_labels_full.get(var, var),
+                        'Con Diabetes (%)': prev_diabetes,
+                        'Sin Diabetes (%)': prev_no_diabetes,
+                        'Diferencia (%)': difference
+                    })
+
+            prev_df = pd.DataFrame(prevalence_data).sort_values('Con Diabetes (%)', ascending=False)
+
+            # Gráfico de barras comparativo
+            fig = go.Figure()
+
+            fig.add_trace(go.Bar(
+                name='Con Diabetes',
+                x=prev_df['Condición'],
+                y=prev_df['Con Diabetes (%)'],
+                marker_color='#e74c3c',
+                text=prev_df['Con Diabetes (%)'].round(1),
+                textposition='auto',
+                texttemplate='%{text:.1f}%'
+            ))
+
+            fig.add_trace(go.Bar(
+                name='Sin Diabetes',
+                x=prev_df['Condición'],
+                y=prev_df['Sin Diabetes (%)'],
+                marker_color='#3498db',
+                text=prev_df['Sin Diabetes (%)'].round(1),
+                textposition='auto',
+                texttemplate='%{text:.1f}%'
+            ))
+
+            fig.update_layout(
+                title='Prevalencia de Condiciones: Con Diabetes vs Sin Diabetes',
+                xaxis_title='Condición de Salud / Comportamiento',
+                yaxis_title='Prevalencia (%)',
+                barmode='group',
+                height=600,
+                xaxis_tickangle=-45,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            # 2. Gráfico de diferencia (más común en diabetes)
+            st.markdown("### 2. Diferencia de Prevalencia (Con Diabetes - Sin Diabetes)")
+
+            fig2 = go.Figure()
+
+            colors = ['#e74c3c' if x > 0 else '#27ae60' for x in prev_df['Diferencia (%)']]
+
+            fig2.add_trace(go.Bar(
+                x=prev_df['Diferencia (%)'],
+                y=prev_df['Condición'],
+                orientation='h',
+                marker_color=colors,
+                text=prev_df['Diferencia (%)'].round(1),
+                textposition='auto',
+                texttemplate='%{text:+.1f}%'
+            ))
+
+            fig2.update_layout(
+                title='Diferencia de Prevalencia entre Grupos (positivo = más común en diabetes)',
+                xaxis_title='Diferencia en Puntos Porcentuales',
+                yaxis_title='Condición',
+                height=600,
+                showlegend=False
+            )
+
+            st.plotly_chart(fig2, use_container_width=True)
+
+            # 3. Tabla con estadísticas detalladas
+            st.markdown("### 3. Tabla Detallada de Prevalencias")
+
+            prev_df_display = prev_df.copy()
+            prev_df_display['Con Diabetes (%)'] = prev_df_display['Con Diabetes (%)'].round(2)
+            prev_df_display['Sin Diabetes (%)'] = prev_df_display['Sin Diabetes (%)'].round(2)
+            prev_df_display['Diferencia (%)'] = prev_df_display['Diferencia (%)'].round(2)
+
+            st.dataframe(prev_df_display, use_container_width=True, hide_index=True)
+
+            # 4. Top 5 condiciones más prevalentes en diabetes
+            st.markdown("### 4. Top 5 Condiciones Más Comunes en Personas con Diabetes")
+
+            top5 = prev_df.nlargest(5, 'Con Diabetes (%)')
+
+            col1, col2 = st.columns([3, 2])
+
+            with col1:
+                fig3 = px.bar(
+                    top5,
+                    x='Con Diabetes (%)',
+                    y='Condición',
+                    orientation='h',
+                    title='Top 5 Aspectos Más Prevalentes',
+                    text='Con Diabetes (%)',
+                    color='Con Diabetes (%)',
+                    color_continuous_scale='Reds'
+                )
+                fig3.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
+                fig3.update_layout(height=400, showlegend=False)
+                st.plotly_chart(fig3, use_container_width=True)
+
+            with col2:
+                st.markdown("#### Porcentajes:")
+                for idx, row in top5.iterrows():
+                    st.metric(
+                        label=row['Condición'],
+                        value=f"{row['Con Diabetes (%)']:.1f}%",
+                        delta=f"+{row['Diferencia (%)']:.1f}% vs sin diabetes"
+                    )
+
+            # 5. Análisis de variables continuas
+            st.markdown("### 5. Comparación de Variables Continuas")
+
+            continuous_vars = ['b_m_i', 'phys_hlth', 'ment_hlth', 'age']
+
+            continuous_data = []
+            for var in continuous_vars:
+                if var in df_diabetes.columns:
+                    mean_diabetes = df_diabetes[var].mean()
+                    mean_no_diabetes = df_no_diabetes[var].mean()
+
+                    continuous_data.append({
+                        'Variable': var_labels_full.get(var, var),
+                        'Promedio Con Diabetes': mean_diabetes,
+                        'Promedio Sin Diabetes': mean_no_diabetes,
+                        'Diferencia': mean_diabetes - mean_no_diabetes
+                    })
+
+            cont_df = pd.DataFrame(continuous_data)
+
+            fig4 = go.Figure()
+
+            fig4.add_trace(go.Bar(
+                name='Con Diabetes',
+                x=cont_df['Variable'],
+                y=cont_df['Promedio Con Diabetes'],
+                marker_color='#e74c3c',
+                text=cont_df['Promedio Con Diabetes'].round(2),
+                textposition='auto'
+            ))
+
+            fig4.add_trace(go.Bar(
+                name='Sin Diabetes',
+                x=cont_df['Variable'],
+                y=cont_df['Promedio Sin Diabetes'],
+                marker_color='#3498db',
+                text=cont_df['Promedio Sin Diabetes'].round(2),
+                textposition='auto'
+            ))
+
+            fig4.update_layout(
+                title='Comparación de Promedios: Variables Continuas',
+                xaxis_title='Variable',
+                yaxis_title='Valor Promedio',
+                barmode='group',
+                height=500,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+
+            st.plotly_chart(fig4, use_container_width=True)
+
+            # Tabla de variables continuas
+            cont_df_display = cont_df.copy()
+            cont_df_display['Promedio Con Diabetes'] = cont_df_display['Promedio Con Diabetes'].round(2)
+            cont_df_display['Promedio Sin Diabetes'] = cont_df_display['Promedio Sin Diabetes'].round(2)
+            cont_df_display['Diferencia'] = cont_df_display['Diferencia'].round(2)
+
+            st.dataframe(cont_df_display, use_container_width=True, hide_index=True)
+
+            # 6. Correlaciones con Diabetes (diabetes_binary = 1)
+            st.markdown("### 6. Correlaciones de Variables con la Presencia de Diabetes")
+            st.markdown("""
+            Coeficiente de correlación de Pearson entre cada variable y la presencia de diabetes.
+            - **Valores positivos**: la variable aumenta con la presencia de diabetes
+            - **Valores negativos**: la variable disminuye con la presencia de diabetes
+            """)
+
+            # Calcular correlaciones
+            numeric_cols = df_filtered.select_dtypes(include=['int64', 'float64']).columns.tolist()
+            if 'diabetes_binary' in numeric_cols:
+                correlations_with_diabetes = df_filtered[numeric_cols].corr()['diabetes_binary'].drop('diabetes_binary').sort_values(ascending=False)
+
+                # Crear labels descriptivos
+                corr_labels = [var_labels_full.get(var, var) for var in correlations_with_diabetes.index]
+                corr_values = correlations_with_diabetes.values
+
+                fig5 = go.Figure(go.Bar(
+                    x=corr_values,
+                    y=corr_labels,
+                    orientation='h',
+                    marker=dict(
+                        color=corr_values,
+                        colorscale='RdBu_r',
+                        showscale=True,
+                        cmin=-1,
+                        cmax=1,
+                        colorbar=dict(title="Correlación")
+                    ),
+                    text=[f'{val:.3f}' for val in corr_values],
+                    textposition='auto'
+                ))
+
+                fig5.update_layout(
+                    title='Correlación de Variables con Presencia de Diabetes (diabetes_binary = 1)',
+                    xaxis_title='Coeficiente de Correlación de Pearson',
+                    yaxis_title='Variable',
+                    height=700,
+                    showlegend=False
+                )
+                st.plotly_chart(fig5, use_container_width=True)
+
+                # Tabla de correlaciones
+                corr_table = pd.DataFrame({
+                    'Variable': corr_labels,
+                    'Correlación con Diabetes': [f'{val:.4f}' for val in corr_values],
+                    'Magnitud': ['Fuerte' if abs(val) > 0.5 else 'Moderada' if abs(val) > 0.3 else 'Débil' for val in corr_values],
+                    'Dirección': ['Positiva' if val > 0 else 'Negativa' for val in corr_values]
+                })
+
+                st.dataframe(corr_table, use_container_width=True, hide_index=True)
+
+        else:
+            st.warning("No hay suficientes datos para realizar la comparación. Ajusta los filtros.")
+
+    # ===== SUB-TAB 2: CORRELACIONES GENERALES =====
+
+    with sub_tab2:
         st.markdown("""
         Se analizan las correlaciones entre TODAS las variables disponibles y la presencia de diabetes.
         Esta vista completa permite identificar los factores más y menos asociados con la diabetes.
@@ -595,7 +880,7 @@ with tab3:
 
         st.dataframe(corr_table, use_container_width=True)
 
-    with sub_tab2:
+    with sub_tab3:
         st.markdown("""
         Análisis de correlaciones **ÚNICAMENTE para casos CON diabetes (diabetes_binary = 1)**.
 
