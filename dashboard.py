@@ -660,12 +660,15 @@ with tab3:
 
             with col2:
                 st.markdown("#### Porcentajes:")
+                # Usar HTML con altura fija para cada métrica
                 for idx, row in top5.iterrows():
-                    st.metric(
-                        label=row['Condición'],
-                        value=f"{row['Con Diabetes (%)']:.1f}%",
-                        delta=f"+{row['Diferencia (%)']:.1f}% vs sin diabetes"
-                    )
+                    st.markdown(f"""
+                    <div style="background-color: #2b2d3a; padding: 10px 15px; margin: 5px 0; border-radius: 6px; border-left: 4px solid #e74c3c; height: 68px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                        <p style="margin: 0; padding: 0; font-size: 13px; color: #9ca3af; font-weight: 500; line-height: 1.2;">{row['Condición']}</p>
+                        <p style="margin: 4px 0 2px 0; padding: 0; font-size: 28px; font-weight: 700; color: #ffffff; line-height: 1;">{row['Con Diabetes (%)']:.1f}%</p>
+                        <p style="margin: 0; padding: 0; font-size: 11px; color: #10b981; font-weight: 500; line-height: 1.2;">↑ +{row['Diferencia (%)']:.1f}% vs sin diabetes</p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
             # 5. Análisis de variables continuas
             st.markdown("### 5. Comparación de Variables Continuas")
